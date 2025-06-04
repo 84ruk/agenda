@@ -13,37 +13,24 @@ export default function HomePage() {
   // Si estamos editando, guardamos el contacto; si es null, el formulario va en modo “crear”
   const [editingContact, setEditingContact] = useState<ContactType | null>(null);
 
-const fetchContacts = async () => {
-  setLoading(true);
-  setError(null);
-
-  try {
-    const token = localStorage.getItem("token"); // o de donde lo estés guardando
-
-    const res = await fetch("/api/contacts", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      credentials: "include", // opcional si usas cookies también
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.error || "Error al cargar contactos.");
-    } else {
-      setContacts(data);
+  const fetchContacts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/contacts");
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Error al cargar contactos.");
+      } else {
+        setContacts(data);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Error de red al cargar contactos.");
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error(err);
-    setError("Error de red al cargar contactos.");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   useEffect(() => {
     fetchContacts();
@@ -52,11 +39,7 @@ const fetchContacts = async () => {
   const handleDelete = async (id: string) => {
     if (!confirm("¿Seguro que deseas eliminar este contacto?")) return;
     try {
-      const res = await fetch(`/api/contacts?id=${id}`, {
-        method: "DELETE",
-        credentials: 'include',
-      });
-
+      const res = await fetch(`/api/contacts?id=${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || "Error al eliminar.");
