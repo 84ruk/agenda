@@ -1,4 +1,3 @@
-// src/app/api/contacts/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectToDatabase } from "../db";
@@ -9,6 +8,13 @@ import { getUserFromRequest } from "../utils/auth";
 function errorResponse(message: string, status: number = 400) {
   return NextResponse.json({ error: message }, { status });
 }
+
+type ContactBody = {
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  email?: string;
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,7 +41,7 @@ export async function GET(request: NextRequest) {
         .exec();
       return NextResponse.json(contactos);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error en GET /api/contacts:", err);
     return errorResponse("Error interno al leer contactos.", 500);
   }
@@ -44,17 +50,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
-    const user = await getUserFromRequest(request);
+    const user = await getUserFromRequest();
     if (!user) return errorResponse("No autorizado. Token inválido o ausente.", 401);
 
-    let body: any;
+    let body: unknown;
     try {
       body = await request.json();
     } catch {
       return errorResponse("Body inválido. Debe ser JSON.", 400);
     }
 
-    const { nombre, apellido, telefono, email } = body;
+    const { nombre, apellido, telefono, email } = body as ContactBody;
 
     if (!nombre || typeof nombre !== "string") {
       return errorResponse("El campo 'nombre' es obligatorio y debe ser string.", 400);
@@ -75,25 +81,25 @@ export async function POST(request: NextRequest) {
         apellido,
         telefono,
         email,
-        userId: user.userId, // 👈 Asociar al usuario autenticado
+        userId: user.userId,
       });
       return NextResponse.json(nuevo, { status: 201 });
-    } catch (err: any) {
-      if (err.name === "ValidationError") {
-        const firstError = Object.values(err.errors)[0] as any;
-        return errorResponse(firstError.message, 400);
-      }
-      if (err.code === 11000) {
-        const duplicatedField = Object.keys(err.keyPattern)[0];
-        return errorResponse(
-          `Ya existe un contacto con ese mismo "${duplicatedField}".`,
-          409
-        );
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "name" in err) {
+        if ((err as any).name === "ValidationError") {
+          const validationErr = err as any;
+          const firstError = Object.values(validationErr.errors)[0] as any;
+          return errorResponse(firstError.message, 400);
+        }
+        if ("code" in err && (err as any).code === 11000) {
+          const duplicatedField = Object.keys((err as any).keyPattern)[0];
+          return errorResponse(`Ya existe un contacto con ese mismo "${duplicatedField}".`, 409);
+        }
       }
       console.error("Error al crear contacto (catch POST):", err);
       return errorResponse("Error interno al crear contacto.", 500);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error en POST /api/contacts:", err);
     return errorResponse("Error interno al procesar la petición.", 500);
   }
@@ -102,17 +108,17 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     await connectToDatabase();
-    const user = await getUserFromRequest(request);
+    const user = await getUserFromRequest();
     if (!user) return errorResponse("No autorizado. Token inválido o ausente.", 401);
 
-    let body: any;
+    let body: unknown;
     try {
       body = await request.json();
     } catch {
       return errorResponse("Body inválido. Debe ser JSON.", 400);
     }
 
-    const { id, nombre, apellido, telefono, email } = body;
+    const { id, nombre, apellido, telefono, email } = body as any;
 
     if (!id || typeof id !== "string") {
       return errorResponse("Debes enviar el campo 'id' (string) para actualizar.", 400);
@@ -154,22 +160,25 @@ export async function PUT(request: NextRequest) {
     try {
       const actualizado = await existente.save();
       return NextResponse.json(actualizado);
-    } catch (err: any) {
-      if (err.name === "ValidationError") {
-        const firstError = Object.values(err.errors)[0] as any;
-        return errorResponse(firstError.message, 400);
-      }
-      if (err.code === 11000) {
-        const duplicatedField = Object.keys(err.keyPattern)[0];
-        return errorResponse(
-          `No se pudo actualizar: ya existe otro contacto con ese mismo "${duplicatedField}".`,
-          409
-        );
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "name" in err) {
+        if ((err as any).name === "ValidationError") {
+          const validationErr = err as any;
+          const firstError = Object.values(validationErr.errors)[0] as any;
+          return errorResponse(firstError.message, 400);
+        }
+        if ("code" in err && (err as any).code === 11000) {
+          const duplicatedField = Object.keys((err as any).keyPattern)[0];
+          return errorResponse(
+            `No se pudo actualizar: ya existe otro contacto con ese mismo "${duplicatedField}".`,
+            409
+          );
+        }
       }
       console.error("Error al actualizar contacto (catch PUT):", err);
       return errorResponse("Error interno al actualizar contacto.", 500);
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error en PUT /api/contacts:", err);
     return errorResponse("Error interno al procesar la petición.", 500);
   }
@@ -178,7 +187,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     await connectToDatabase();
-    const user = await getUserFromRequest(request);
+    const user = await getUserFromRequest();
     if (!user) return errorResponse("No autorizado. Token inválido o ausente.", 401);
 
     const url = new URL(request.url);
@@ -200,7 +209,7 @@ export async function DELETE(request: NextRequest) {
       return errorResponse(`No existe contacto con id=${idParam}.`, 404);
     }
     return NextResponse.json({ message: `Contacto con id=${idParam} eliminado.` });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error en DELETE /api/contacts:", err);
     return errorResponse("Error interno al eliminar contacto.", 500);
   }

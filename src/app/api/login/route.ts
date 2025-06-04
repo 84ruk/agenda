@@ -27,14 +27,19 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
-    console.log(password);
-    console.log(user.password);
+    
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
     }
 
-    const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign(
+    { userId: user._id, email: user.email },
+    JWT_SECRET!, // ¡aseguro que no es undefined!
+    { expiresIn: '1h' }
+    );
+
 
     // Guardar el token en una cookie segura
     cookies().set('token', token, {

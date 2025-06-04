@@ -2,8 +2,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import ContactCard, { Contact as ContactType } from "./contacts/components/ContactCard";
-import ContactForm from "./contacts/components/ContactForm";
+import ContactCard, { Contact as ContactType } from "./components/ContactCard";
+
+import ContactForm from "./components/ContactForm";
 
 export default function HomePage() {
   const [contacts, setContacts] = useState<ContactType[]>([]);
