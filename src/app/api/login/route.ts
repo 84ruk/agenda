@@ -1,6 +1,6 @@
 // app/api/login/route.ts
 import { NextResponse } from 'next/server';
-import bcrypt from 'bcrypt';
+import bcrypt from "bcryptjs";
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 
